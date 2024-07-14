@@ -57,7 +57,9 @@ contract AddLiquidityScript is Script {
 
         // Provide 10_000e18 worth of liquidity on the range of [-100, 100]
         vm.broadcast();
-        BalanceDelta delta = lpRouter.modifyLiquidity(pool, IPoolManager.ModifyLiquidityParams(13863 - 1203, 13863 + 1207, 10_000e18, 0), hookData);
+        //BalanceDelta delta = lpRouter.modifyLiquidity(pool, IPoolManager.ModifyLiquidityParams(13863 - 1203, 13863 + 1207, 10_000e18, 0), hookData);
+        //BalanceDelta delta = lpRouter.modifyLiquidity(pool, IPoolManager.ModifyLiquidityParams(-60, 60, 10e18, bytes32(0)), hookData);
+        BalanceDelta delta = lpRouter.modifyLiquidity(pool, IPoolManager.ModifyLiquidityParams(13763 - 63, 13763 + 37, 10e18, bytes32(0)), hookData);
         console.log("delta amount 0 (mUNI)", delta.amount0());
         console.log("delta amount 1 (mUSDC)", delta.amount1());
     }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {PoolModifyLiquidityTest} from "v4-core/test/PoolModifyLiquidityTest.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {CurrencyLibrary, Currency} from "v4-core/types/Currency.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
@@ -23,6 +24,7 @@ contract GetPoolInfo is Script {
     address constant HOOK_ADDRESS = address(0); //address of the hook contract deployed to SEPOLIA
 
     IPoolManager manager = IPoolManager(SEPOLIA_POOLMANAGER);
+    PoolModifyLiquidityTest lpRouter = PoolModifyLiquidityTest(address(0xFB3e0C6F74eB1a21CC1Da29aeC80D2Dfe6C9a317));
 
     // Pool definition
     address token0 = MUNI_ADDRESS;
@@ -52,8 +54,15 @@ contract GetPoolInfo is Script {
 
         vm.startBroadcast();
         (, int24 currentTick,,) = StateLibrary.getSlot0(manager, PoolIdLibrary.toId(pool));
+        uint160 sqrtPriceAtCurrentTick = TickMath.getSqrtPriceAtTick(currentTick);
+        bytes32 positionId =
+            keccak256(abi.encodePacked(address(lpRouter), int24(13700), int24(13800), bytes32(0)));
+        uint128 liquidityInPos = StateLibrary.getPositionLiquidity(manager, PoolIdLibrary.toId(pool), positionId);
         vm.stopBroadcast();
+
         console.log("Current tick: ", currentTick);
+        console.log("Sqrt price at current tick: ", sqrtPriceAtCurrentTick);
+        console.log("Liquidity in position: ", liquidityInPos);
     }
 
 
