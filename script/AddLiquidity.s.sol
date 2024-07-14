@@ -21,8 +21,7 @@ contract AddLiquidityScript is Script {
     address constant SEPOLIA_POOLMANAGER = address(0xFf34e285F8ED393E366046153e3C16484A4dD674); //pool manager deployed to SEPOLIA
     address constant MUNI_ADDRESS = address(0x2a238CbF7A05B45Fb101d9Fde6A1025719Da50fF); //mUNI deployed to SEPOLIA
     address constant MUSDC_ADDRESS = address(0x2AFc1b35CA3102111099f02851CA1C20eA208dDc); //mUSDC deployed to SEPOLIA
-    //address constant HOOK_ADDRESS = address(0x3CA2cD9f71104a6e1b67822454c725FcaeE35fF6); //address of the hook contract deployed to SEPOLIA
-    address constant HOOK_ADDRESS = address(0); //address of the hook contract deployed to SEPOLIA
+    address constant HOOK_ADDRESS = address(0xA2b10AEd128770a99Ec138C1a61bD806A010e20A); //address of the hook contract deployed to SEPOLIA
 
     PoolModifyLiquidityTest lpRouter = PoolModifyLiquidityTest(address(0xFB3e0C6F74eB1a21CC1Da29aeC80D2Dfe6C9a317));
 
@@ -46,8 +45,7 @@ contract AddLiquidityScript is Script {
         vm.broadcast();
         IERC20(token1).approve(address(lpRouter), 100_000e18);
 
-        // optionally specify hookData if the hook depends on arbitrary data for liquidity modification
-        bytes memory hookData = new bytes(0);
+        bytes memory hookData = abi.encode(block.timestamp);
 
         // logging the pool ID
         PoolId id = PoolIdLibrary.toId(pool);

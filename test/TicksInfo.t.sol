@@ -18,7 +18,7 @@ contract TakeProfitsHookTest is Test {
     
     function setUp() public {}
 
-    function test_DisplayTickInfo() public {
+    function test_DisplayTickInfo() public view {
         int24 maxUsableTick = TickMath.maxUsableTick(tickSpacing);
         int24 minUsableTick = TickMath.minUsableTick(tickSpacing);
         int24 tickAtSqrtPrice = TickMath.getTickAtSqrtPrice(startingPrice4);

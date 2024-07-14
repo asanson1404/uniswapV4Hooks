@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
+import "forge-std/console.sol";
 import {BaseHook} from "v4-periphery/BaseHook.sol";
-import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 import {PoolModifyLiquidityTest} from "v4-core/test/PoolModifyLiquidityTest.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
@@ -12,7 +12,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {StateLibrary} from "v4-core/libraries/StateLibrary.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 
-contract LendingLPHook is BaseHook, ERC1155 {
+contract LendingLPHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
@@ -38,17 +38,17 @@ contract LendingLPHook is BaseHook, ERC1155 {
         PoolKey poolKey;
     }
 
-    // Initialize BaseHook and ERC1155 parent contracts in the constructor
+    // Initialize BaseHook
     constructor(
         IPoolManager _poolManager,
         address _lpRouter,
-        address _fakeAave,
-        string memory _uri
-    ) BaseHook(_poolManager) ERC1155(_uri) {
+        address _fakeAave
+    ) BaseHook(_poolManager) {
         lpRouter = PoolModifyLiquidityTest(_lpRouter);
         fakeAave = _fakeAave;
     }
 
+    // function validateHookAddress(BaseHook _this) internal pure override {}
 
     // Required override function for BaseHook to let the PoolManager know which hooks are implemented
     function getHookPermissions()
@@ -65,7 +65,7 @@ contract LendingLPHook is BaseHook, ERC1155 {
                 afterAddLiquidity: true,
                 beforeRemoveLiquidity: false,
                 afterRemoveLiquidity: false,
-                beforeSwap: true,
+                beforeSwap: false,
                 afterSwap: true,
                 beforeDonate: false,
                 afterDonate: false,
@@ -86,7 +86,7 @@ contract LendingLPHook is BaseHook, ERC1155 {
         // Add bytes calldata after tick
         bytes calldata
     ) external override onlyByManager returns (bytes4) {
-        _setTickLowerLast(key.toId(), _getTickLower(tick, key.tickSpacing));
+        _setTickLowerLast(key.toId(), getTickLower(tick, key.tickSpacing));
         return LendingLPHook.afterInitialize.selector;
     }
 
@@ -98,7 +98,7 @@ contract LendingLPHook is BaseHook, ERC1155 {
         BalanceDelta balanceDelta,
         bytes calldata
     ) external override onlyByManager returns (bytes4, BalanceDelta) {
-
+        console.log("In AFTER ADD LIQUIDITY HOOOOOOOOOOOOOOOOOOOOOOOOK");
         bytes32 positionId =
             keccak256(abi.encodePacked(address(lpRouter), params.tickLower, params.tickUpper, bytes32(0)));
         positionIds.push(positionId);
@@ -135,7 +135,7 @@ contract LendingLPHook is BaseHook, ERC1155 {
     ) external override onlyByManager returns (bytes4, int128) {
         // Get the exact current tick and use it to calculate the currentTickLower
         (, int24 currentTick,,) = StateLibrary.getSlot0(manager, key.toId());
-        int24 currentTickLower = _getTickLower(currentTick, key.tickSpacing);
+        int24 currentTickLower = getTickLower(currentTick, key.tickSpacing);
         int24 lastTickLower = tickLowerLasts[key.toId()];
 
         bytes32 positionId;
@@ -146,17 +146,17 @@ contract LendingLPHook is BaseHook, ERC1155 {
             for (uint256 i = 0; i < positionIds.length; i++) {
                 positionId = positionIds[i];
                 if (positionStatus[positionId].tickLower > currentTickLower + (nbTicksBuffer * key.tickSpacing) ) {
-                    liquidityToSend += _getPositionLiquidity(key, positionStatus[positionId].tickLower, positionStatus[positionId].tickUpper);
+                    liquidityToSend += getPositionLiquidity(key, positionStatus[positionId].tickLower, positionStatus[positionId].tickUpper);
                     positionStatus[positionId].tokensWorkingSomewhereElse = true;
                 }
             }
             manager.take(key.currency1, address(this), liquidityToSend);
-            CurrencyLibrary.transfer(key.currency1, fakeAave, uint256(liquidityToSend));
+            key.currency1.transfer(fakeAave, uint256(liquidityToSend));
         } else {
             for (uint256 i = 0; i < positionIds.length; i++) {
                 positionId = positionIds[i];
                 if (positionStatus[positionId].tickUpper < currentTickLower - (nbTicksBuffer * key.tickSpacing) ) {
-                    liquidityToSend += _getPositionLiquidity(key, positionStatus[positionId].tickLower, positionStatus[positionId].tickUpper);
+                    liquidityToSend += getPositionLiquidity(key, positionStatus[positionId].tickLower, positionStatus[positionId].tickUpper);
                     positionStatus[positionId].tokensWorkingSomewhereElse = true;
                 }
             }
@@ -171,17 +171,17 @@ contract LendingLPHook is BaseHook, ERC1155 {
         tickLowerLasts[poolId] = tickLower;
     }
 
-    function _getTickLower(int24 actualTick, int24 tickSpacing) private pure returns (int24) {
+    function getTickLower(int24 actualTick, int24 tickSpacing) public pure returns (int24) {
         int24 intervals = actualTick / tickSpacing;
         if (actualTick < 0 && actualTick % tickSpacing != 0) intervals--; // round towards negative infinity
         return intervals * tickSpacing;
     }
 
-    function _getPositionLiquidity(
+    function getPositionLiquidity(
         PoolKey calldata key,
         int24 tickLower,
         int24 tickUpper
-    ) private view returns (uint128) {
+    ) public view returns (uint128) {
         bytes32 positionId =
             keccak256(abi.encodePacked(address(lpRouter), tickLower, tickUpper, bytes32(0)));
         return StateLibrary.getPositionLiquidity(manager, PoolIdLibrary.toId(key), positionId);
